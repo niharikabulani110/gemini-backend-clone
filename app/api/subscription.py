@@ -1,0 +1,29 @@
+from fastapi import APIRouter, Depends, Request, HTTPException
+from app.services.stripe_service import create_stripe_checkout, handle_stripe_webhook, get_subscription_status
+from app.schemas.subscription import SubscriptionStatusResponse
+from app.core.security import verify_token
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+
+auth_scheme = HTTPBearer()
+router = APIRouter()
+
+def get_user_id(credentials: HTTPAuthorizationCredentials = Depends(auth_scheme)) -> int:
+    token = credentials.credentials
+    payload = verify_token(token)
+    if payload is None:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    return int(payload["sub"])
+
+@router.post("/pro")
+def start_subscription(user_id: int = Depends(get_user_id)):
+    return create_stripe_checkout(user_id)
+
+@router.get("/status", response_model=SubscriptionStatusResponse)
+def check_status(user_id: int = Depends(get_user_id)):
+    return {"status": get_subscription_status(user_id)}
+
+@router.post("/webhook/stripe")
+async def stripe_webhook(request: Request):
+    payload = await request.body()
+    sig_header = request.headers.get("stripe-signature")
+    return handle_stripe_webhook(payload, sig_header)
