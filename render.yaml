@@ -6,23 +6,14 @@ services:
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: DATABASE_URL
-        fromDatabase:
-          name: gemini-db
-          property: connectionString
       - key: REDIS_URL
-        value: redis://red-d1pqr9er433s73dm742g:6379
       - key: CELERY_BROKER_URL
-        value: redis://red-d1pqr9er433s73dm742g:6379
       - key: CELERY_RESULT_BACKEND
-        value: redis://red-d1pqr9er433s73dm742g:6379
       - key: JWT_SECRET
-        generateValue: true
       - key: STRIPE_SECRET_KEY
-        sync: false
       - key: STRIPE_WEBHOOK_SECRET
-        sync: false
       - key: GEMINI_API_KEY
-        sync: false
+      - key: GEMINI_API_URL
 
 databases:
   - name: gemini-db
