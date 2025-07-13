@@ -35,11 +35,6 @@ def get_user_profile(user_id: int = Depends(get_user_id)):
     finally:
         db.close()
 
-@router.get("/profile", response_model=UserResponse)
-def get_user_profile_alt(user_id: int = Depends(get_user_id)):
-    """Alternative endpoint for user profile (backward compatibility)"""
-    return get_user_profile(user_id)
-
 @router.get("/usage")
 def get_usage_stats(user_id: int = Depends(get_user_id)):
     """Get user's current usage statistics"""
