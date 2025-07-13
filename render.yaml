@@ -10,11 +10,11 @@ services:
           name: gemini-db
           property: connectionString
       - key: REDIS_URL
-        value: redis://redis:6379
+        value: redis://red-d1pqr9er433s73dm742g:6379
       - key: CELERY_BROKER_URL
-        value: redis://redis:6379
+        value: redis://red-d1pqr9er433s73dm742g:6379
       - key: CELERY_RESULT_BACKEND
-        value: redis://redis:6379
+        value: redis://red-d1pqr9er433s73dm742g:6379
       - key: JWT_SECRET
         generateValue: true
       - key: STRIPE_SECRET_KEY
