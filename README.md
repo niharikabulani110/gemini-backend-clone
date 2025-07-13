@@ -2,7 +2,7 @@
 
 A comprehensive backend system that enables user-specific chatrooms, OTP-based login, Gemini API-powered AI conversations, and subscription handling via Stripe.
 
-## Features
+## 🚀 Features
 
 - **User Authentication**: OTP-based login system with mobile number verification
 - **Chatroom Management**: Create and manage multiple chatrooms with AI conversations
@@ -12,22 +12,182 @@ A comprehensive backend system that enables user-specific chatrooms, OTP-based l
 - **Caching**: Redis-based caching for improved performance
 - **Message Queue**: Celery-based async processing for AI responses
 
-## Tech Stack
+## 🏗️ Architecture Overview
 
-- **Framework**: FastAPI
-- **Database**: PostgreSQL with SQLAlchemy ORM
-- **Cache**: Redis
+### System Components
+
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   FastAPI App   │    │   PostgreSQL    │    │     Redis       │
+│   (Port 8000)   │◄──►│   (Port 5433)   │    │   (Port 6380)   │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+         │                       │                       │
+         │                       │                       │
+         ▼                       ▼                       ▼
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   Celery Worker │    │   Gemini API    │    │   Stripe API    │
+│   (Async Tasks) │    │   (External)    │    │   (External)    │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+```
+
+### Technology Stack
+
+- **Framework**: FastAPI (Python 3.9+)
+- **Database**: PostgreSQL 14 with SQLAlchemy ORM
+- **Cache**: Redis 7.0
 - **Message Queue**: Celery with Redis broker
-- **Authentication**: JWT tokens
-- **Payments**: Stripe
+- **Authentication**: JWT tokens with bcrypt password hashing
+- **Payments**: Stripe (sandbox mode)
 - **AI**: Google Gemini API
 - **Containerization**: Docker & Docker Compose
 
-## Setup Instructions
+### Project Structure
 
-### 1. Environment Variables
+```
+app/
+├── api/                    # API route handlers
+│   ├── auth.py            # Authentication endpoints
+│   ├── user.py            # User management
+│   ├── chatroom.py        # Chatroom operations
+│   ├── message.py         # Message handling
+│   ├── subscription.py    # Stripe subscriptions
+│   └── webhook.py         # Stripe webhooks
+├── cache/                 # Redis caching layer
+│   └── redis_cache.py     # Chatroom caching
+├── core/                  # Core utilities
+│   ├── config.py          # Environment configuration
+│   └── security.py        # JWT & password utilities
+├── models/                # Database models
+│   ├── user.py            # User model
+│   ├── chatroom.py        # Chatroom model
+│   ├── message.py         # Message model
+│   └── subscription.py    # Subscription models
+├── schemas/               # Pydantic schemas
+│   ├── auth.py            # Auth request/response schemas
+│   ├── user.py            # User schemas
+│   ├── chatroom.py        # Chatroom schemas
+│   ├── message.py         # Message schemas
+│   └── subscription.py    # Subscription schemas
+├── services/              # Business logic
+│   ├── auth_service.py    # Authentication logic
+│   ├── chatroom_service.py # Chatroom operations
+│   ├── gemini_service.py  # Gemini API integration
+│   ├── stripe_service.py  # Stripe integration
+│   └── rate_limit_service.py # Rate limiting
+└── workers/               # Celery tasks
+    └── tasks.py           # Async task definitions
+```
 
-Create a `.env` file in the root directory with the following variables:
+## 🔄 Queue System Explanation
+
+### Why Celery?
+
+The system uses Celery for asynchronous message processing to:
+
+1. **Improve User Experience**: Users get immediate response while AI processing happens in background
+2. **Handle API Rate Limits**: Gemini API has rate limits that async processing helps manage
+3. **Scalability**: Multiple workers can process messages concurrently
+4. **Reliability**: Failed tasks can be retried automatically
+
+### Message Flow
+
+```
+1. User sends message → FastAPI endpoint
+2. Message saved to database → Immediate response to user
+3. Celery task queued → Redis broker
+4. Celery worker picks up task → Calls Gemini API
+5. AI response received → Saved to database
+6. User can fetch updated chatroom → See AI response
+```
+
+### Celery Configuration
+
+- **Broker**: Redis (for task queue)
+- **Result Backend**: Redis (for task results)
+- **Concurrency**: Configurable worker processes
+- **Task Routing**: All AI tasks go to dedicated queue
+- **Retry Logic**: Failed API calls retry with exponential backoff
+
+## 🤖 Gemini API Integration Overview
+
+### Integration Details
+
+- **Model**: Gemini 1.5 Flash (latest stable)
+- **Endpoint**: `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent`
+- **Authentication**: API key via query parameter
+- **Request Format**: JSON with content parts
+- **Response Processing**: Extracts text from candidates
+
+### Error Handling
+
+- **API Errors**: Graceful handling of 401, 404, 429, 500 errors
+- **Timeout**: 30-second timeout for API calls
+- **Fallback**: Returns error message if API fails
+- **Logging**: Detailed error logging for debugging
+
+### Rate Limiting
+
+- **Basic Users**: 5 messages per day
+- **Pro Users**: Unlimited messages
+- **API Level**: Respects Gemini API rate limits
+- **Queue Management**: Tasks queued when limits exceeded
+
+## 🎯 Design Decisions & Assumptions
+
+### Authentication System
+
+**Decision**: OTP + Password hybrid system
+- **Why**: Combines security of OTP with convenience of password
+- **Assumption**: OTP delivery is mocked (no SMS integration)
+- **Security**: JWT tokens with 7-day expiration
+
+### Database Design
+
+**Decision**: Separate tables for users, chatrooms, messages, subscriptions
+- **Why**: Normalized design for scalability
+- **Assumption**: Users can have multiple chatrooms
+- **Indexing**: Mobile number, user_id, chatroom_id indexed
+
+### Caching Strategy
+
+**Decision**: Redis caching for chatroom lists
+- **Why**: Chatrooms don't change frequently, high read volume
+- **TTL**: 5 minutes (balance between performance and freshness)
+- **Invalidation**: Cache cleared when new chatroom created
+
+### Subscription Model
+
+**Decision**: Basic (free) vs Pro (paid) tiers
+- **Basic**: 5 messages/day, limited features
+- **Pro**: Unlimited messages, all features
+- **Assumption**: Stripe handles payment processing
+- **Webhook**: Real-time subscription status updates
+
+### Message Processing
+
+**Decision**: Asynchronous processing with immediate response
+- **Why**: Better UX, handles API delays gracefully
+- **Trade-off**: Users need to poll for AI responses
+- **Alternative**: WebSocket for real-time updates (future enhancement)
+
+## 🛠️ Setup Instructions
+
+### Prerequisites
+
+- Docker and Docker Compose
+- Python 3.9+ (for local development)
+- Git
+
+### 1. Clone Repository
+
+```bash
+git clone <repository-url>
+cd gemini-backend-clone
+```
+
+### 2. Environment Configuration
+
+Create a `.env` file in the root directory:
 
 ```env
 # Database
@@ -51,7 +211,7 @@ STRIPE_WEBHOOK_SECRET=whsec_your_stripe_webhook_secret_here
 GEMINI_API_KEY=your_gemini_api_key_here
 ```
 
-### 2. Running with Docker
+### 3. Running with Docker (Recommended)
 
 ```bash
 # Build and start all services
@@ -59,9 +219,15 @@ docker-compose up --build
 
 # Run in background
 docker-compose up -d --build
+
+# View logs
+docker-compose logs -f
+
+# Stop services
+docker-compose down
 ```
 
-### 3. Manual Setup (Alternative)
+### 4. Manual Setup (Alternative)
 
 ```bash
 # Install dependencies
@@ -80,88 +246,250 @@ celery -A app.workers.tasks worker --loglevel=info
 uvicorn app.main:app --reload
 ```
 
-## API Endpoints
+## 🧪 Testing with Postman
+
+### Quick Setup
+
+1. **Import Collection**: Import `Gemini_Backend_API.postman_collection.json`
+2. **Import Environment**: Import `Gemini_Backend_Environment.postman_environment.json`
+3. **Select Environment**: Choose "Gemini Backend - Local" from dropdown
+4. **Start Backend**: Ensure Docker containers are running
+
+### Testing Workflow
+
+#### 1. Authentication Flow
+```bash
+# 1. Signup
+POST {{base_url}}/auth/signup
+{
+    "mobile_number": "+1234567890",
+    "password": "testpassword123"
+}
+
+# 2. Send OTP
+POST {{base_url}}/auth/send-otp
+{
+    "mobile_number": "+1234567890"
+}
+
+# 3. Verify OTP (JWT token auto-extracted)
+POST {{base_url}}/auth/verify-otp
+{
+    "mobile_number": "+1234567890",
+    "otp": "123456"
+}
+```
+
+#### 2. Chatroom Testing
+```bash
+# 1. Create Chatroom
+POST {{base_url}}/chatroom/
+Authorization: Bearer {{access_token}}
+{
+    "name": "My AI Assistant"
+}
+
+# 2. List Chatrooms
+GET {{base_url}}/chatroom/
+Authorization: Bearer {{access_token}}
+
+# 3. Get Chatroom Details
+GET {{base_url}}/chatroom/{{chatroom_id}}
+Authorization: Bearer {{access_token}}
+```
+
+#### 3. Message Testing
+```bash
+# Send Message (async response)
+POST {{base_url}}/chatroom/{{chatroom_id}}/message
+Authorization: Bearer {{access_token}}
+{
+    "content": "Hello, can you help me with Python programming?"
+}
+```
+
+#### 4. Subscription Testing
+```bash
+# Check Status
+GET {{base_url}}/subscription/status
+Authorization: Bearer {{access_token}}
+
+# Start Pro Subscription
+POST {{base_url}}/subscription/pro
+Authorization: Bearer {{access_token}}
+```
+
+### Automated Features
+
+- **JWT Auto-Extraction**: Token automatically saved from OTP verification
+- **Built-in Tests**: Each request includes validation tests
+- **Environment Variables**: Easy configuration management
+
+## 📊 API Endpoints
 
 ### Authentication
-- `POST /auth/signup` - Register new user
-- `POST /auth/send-otp` - Send OTP to mobile number
-- `POST /auth/verify-otp` - Verify OTP and get JWT token
-- `POST /auth/forgot-password` - Send OTP for password reset
-- `POST /auth/change-password` - Change password (requires auth)
-- `POST /auth/reset-password` - Reset password with OTP
+| Endpoint | Method | Auth | Description |
+|----------|--------|------|-------------|
+| `/auth/signup` | POST | ❌ | Register new user |
+| `/auth/send-otp` | POST | ❌ | Send OTP to mobile |
+| `/auth/verify-otp` | POST | ❌ | Verify OTP & get JWT |
+| `/auth/forgot-password` | POST | ❌ | Send reset OTP |
+| `/auth/reset-password` | POST | ❌ | Reset password with OTP |
+| `/auth/change-password` | POST | ✅ | Change password |
 
 ### User Management
-- `GET /user/me` - Get current user profile
-- `GET /user/usage` - Get usage statistics
+| Endpoint | Method | Auth | Description |
+|----------|--------|------|-------------|
+| `/user/me` | GET | ✅ | Get user profile |
+| `/user/usage` | GET | ✅ | Get usage statistics |
 
 ### Chatrooms
-- `POST /chatroom/` - Create new chatroom
-- `GET /chatroom/` - List user's chatrooms
-- `GET /chatroom/{id}` - Get specific chatroom details
+| Endpoint | Method | Auth | Description |
+|----------|--------|------|-------------|
+| `/chatroom/` | POST | ✅ | Create chatroom |
+| `/chatroom/` | GET | ✅ | List chatrooms (cached) |
+| `/chatroom/{id}` | GET | ✅ | Get chatroom details |
 
 ### Messages
-- `POST /chatroom/{id}/message` - Send message to chatroom
+| Endpoint | Method | Auth | Description |
+|----------|--------|------|-------------|
+| `/chatroom/{id}/message` | POST | ✅ | Send message (async) |
 
 ### Subscriptions
-- `POST /subscription/pro` - Start Pro subscription
-- `GET /subscription/status` - Check subscription status
+| Endpoint | Method | Auth | Description |
+|----------|--------|------|-------------|
+| `/subscription/pro` | POST | ✅ | Start Pro subscription |
+| `/subscription/status` | GET | ✅ | Check subscription |
 
 ### Webhooks
-- `POST /webhook/stripe` - Stripe webhook handler
+| Endpoint | Method | Auth | Description |
+|----------|--------|------|-------------|
+| `/webhook/stripe` | POST | ❌ | Stripe webhook handler |
 
-## Rate Limiting
+## 🚀 Deployment Instructions
 
-- **Basic Tier**: 5 messages per day
-- **Pro Tier**: Unlimited messages
+### Production Deployment
 
-## Caching
-
-- Chatroom lists are cached in Redis with 5-minute TTL
-- Cache is invalidated when new chatrooms are created
-
-## Development
-
-### Project Structure
+#### 1. Environment Variables
+```env
+# Production settings
+DATABASE_URL=postgresql://user:pass@prod-db:5432/gemini
+REDIS_URL=redis://prod-redis:6379
+JWT_SECRET=very-long-random-secret-key
+STRIPE_SECRET_KEY=sk_live_your_live_key
+GEMINI_API_KEY=your_production_gemini_key
 ```
-app/
-├── api/           # API routes
-├── cache/         # Redis caching
-├── core/          # Core utilities
-├── models/        # Database models
-├── schemas/       # Pydantic schemas
-├── services/      # Business logic
-└── workers/       # Celery tasks
+
+#### 2. Docker Production
+```bash
+# Build production image
+docker build -t gemini-backend:prod .
+
+# Run with production compose
+docker-compose -f docker-compose.prod.yml up -d
 ```
+
+#### 3. Cloud Deployment Options
+
+**AWS ECS/Fargate**:
+```bash
+# Deploy to ECS
+aws ecs create-service --cluster gemini-cluster --service-name gemini-backend
+```
+
+**Google Cloud Run**:
+```bash
+# Deploy to Cloud Run
+gcloud run deploy gemini-backend --source .
+```
+
+**Heroku**:
+```bash
+# Deploy to Heroku
+heroku create gemini-backend
+git push heroku main
+```
+
+#### 4. Security Considerations
+
+- **HTTPS**: Always use HTTPS in production
+- **Secrets**: Use environment variables for all secrets
+- **Rate Limiting**: Implement API-level rate limiting
+- **CORS**: Configure CORS for your frontend domain
+- **Database**: Use connection pooling in production
+
+## 🔧 Development
 
 ### Adding New Features
 
-1. Create models in `app/models/`
-2. Add schemas in `app/schemas/`
-3. Implement business logic in `app/services/`
-4. Create API endpoints in `app/api/`
-5. Add tests as needed
+1. **Create Models**: Add database models in `app/models/`
+2. **Add Schemas**: Create Pydantic schemas in `app/schemas/`
+3. **Implement Services**: Add business logic in `app/services/`
+4. **Create API Endpoints**: Add routes in `app/api/`
+5. **Add Tests**: Create tests for new functionality
 
-## Testing
+### Code Style
+
+- **Python**: Follow PEP 8 guidelines
+- **Type Hints**: Use type hints for all functions
+- **Docstrings**: Add docstrings for all public functions
+- **Error Handling**: Use proper exception handling
+
+## 🐛 Troubleshooting
+
+### Common Issues
+
+1. **Connection Refused**: Check if all Docker containers are running
+2. **JWT Token Issues**: Verify JWT_SECRET is set correctly
+3. **Gemini API Errors**: Check API key and rate limits
+4. **Celery Worker Issues**: Check Redis connection and worker logs
+5. **Database Connection**: Verify DATABASE_URL and PostgreSQL status
+
+### Logs
 
 ```bash
-# Run tests (when implemented)
-pytest
+# View all logs
+docker-compose logs
 
-# Test specific endpoint
-curl -X POST "http://localhost:8000/auth/signup" \
-     -H "Content-Type: application/json" \
-     -d '{"mobile_number": "+1234567890"}'
+# View specific service logs
+docker-compose logs app
+docker-compose logs celery
+docker-compose logs db
+docker-compose logs redis
+
+# Follow logs in real-time
+docker-compose logs -f
 ```
 
-## Production Deployment
+## 📈 Performance Considerations
 
-1. Change JWT secret to a secure random string
-2. Use production Stripe keys
-3. Configure proper CORS origins
-4. Set up proper database backups
-5. Configure monitoring and logging
-6. Use HTTPS in production
+### Caching Strategy
+- **Chatroom Lists**: 5-minute TTL in Redis
+- **User Data**: Consider caching frequently accessed user data
+- **API Responses**: Cache Gemini responses for similar queries
 
-## License
+### Database Optimization
+- **Indexes**: Ensure proper indexing on frequently queried columns
+- **Connection Pooling**: Use connection pooling in production
+- **Query Optimization**: Monitor slow queries and optimize
 
-MIT License
+### Scalability
+- **Horizontal Scaling**: Multiple Celery workers
+- **Load Balancing**: Use load balancer for multiple app instances
+- **Database Sharding**: Consider sharding for large-scale deployments
+
+## 📝 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests
+5. Submit a pull request
+
+---
+
+**Happy coding! 🚀** 

@@ -1,0 +1,586 @@
+{
+	"info": {
+		"_postman_id": "gemini-backend-api-collection",
+		"name": "Gemini Backend API",
+		"description": "Complete API collection for Gemini-style backend system with OTP authentication, chatrooms, AI conversations, and Stripe subscriptions",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Authentication",
+			"item": [
+				{
+					"name": "Signup User",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"mobile_number\": \"+1234567890\",\n    \"password\": \"testpassword123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/signup",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"auth",
+								"signup"
+							]
+						},
+						"description": "Register a new user with mobile number and password"
+					},
+					"response": []
+				},
+				{
+					"name": "Send OTP",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"mobile_number\": \"+1234567890\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/send-otp",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"auth",
+								"send-otp"
+							]
+						},
+						"description": "Send OTP to user's mobile number (mocked response)"
+					},
+					"response": []
+				},
+				{
+					"name": "Verify OTP",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"mobile_number\": \"+1234567890\",\n    \"otp\": \"123456\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/verify-otp",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"auth",
+								"verify-otp"
+							]
+						},
+						"description": "Verify OTP and get JWT access token"
+					},
+					"response": []
+				},
+				{
+					"name": "Forgot Password",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"mobile_number\": \"+1234567890\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/forgot-password",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"auth",
+								"forgot-password"
+							]
+						},
+						"description": "Send OTP for password reset"
+					},
+					"response": []
+				},
+				{
+					"name": "Reset Password",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"mobile_number\": \"+1234567890\",\n    \"otp\": \"123456\",\n    \"new_password\": \"newpassword123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/reset-password",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"auth",
+								"reset-password"
+							]
+						},
+						"description": "Reset password using OTP"
+					},
+					"response": []
+				},
+				{
+					"name": "Change Password",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"current_password\": \"testpassword123\",\n    \"new_password\": \"newpassword123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/change-password",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"auth",
+								"change-password"
+							]
+						},
+						"description": "Change password while logged in (requires JWT token)"
+					},
+					"response": []
+				}
+			],
+			"description": "Authentication endpoints for user registration, OTP verification, and password management"
+		},
+		{
+			"name": "User Management",
+			"item": [
+				{
+					"name": "Get User Profile",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/user/me",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"user",
+								"me"
+							]
+						},
+						"description": "Get current user's profile information"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Usage Statistics",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/user/usage",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"user",
+								"usage"
+							]
+						},
+						"description": "Get user's daily message usage and subscription tier information"
+					},
+					"response": []
+				}
+			],
+			"description": "User profile and usage management endpoints"
+		},
+		{
+			"name": "Chatrooms",
+			"item": [
+				{
+					"name": "Create Chatroom",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"My AI Assistant\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/chatroom/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"chatroom",
+								""
+							]
+						},
+						"description": "Create a new chatroom for the authenticated user"
+					},
+					"response": []
+				},
+				{
+					"name": "List Chatrooms",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/chatroom/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"chatroom",
+								""
+							]
+						},
+						"description": "Get all chatrooms for the authenticated user (cached with 5-min TTL)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Chatroom Details",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/chatroom/{{chatroom_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"chatroom",
+								"{{chatroom_id}}"
+							]
+						},
+						"description": "Get detailed information about a specific chatroom including messages"
+					},
+					"response": []
+				}
+			],
+			"description": "Chatroom management endpoints for creating, listing, and viewing chatrooms"
+		},
+		{
+			"name": "Messages",
+			"item": [
+				{
+					"name": "Send Message",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"content\": \"Hello, can you help me with Python programming?\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/chatroom/{{chatroom_id}}/message",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"chatroom",
+								"{{chatroom_id}}",
+								"message"
+							]
+						},
+						"description": "Send a message to a chatroom and get async Gemini AI response"
+					},
+					"response": []
+				}
+			],
+			"description": "Message handling endpoints for AI conversations"
+		},
+		{
+			"name": "Subscriptions",
+			"item": [
+				{
+					"name": "Start Pro Subscription",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/subscription/pro",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"subscription",
+								"pro"
+							]
+						},
+						"description": "Initiate Stripe Checkout for Pro subscription upgrade"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Subscription Status",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/subscription/status",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"subscription",
+								"status"
+							]
+						},
+						"description": "Check current subscription tier and status"
+					},
+					"response": []
+				}
+			],
+			"description": "Subscription management endpoints for Stripe integration"
+		},
+		{
+			"name": "Webhooks",
+			"item": [
+				{
+					"name": "Stripe Webhook",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "stripe-signature",
+								"value": "{{stripe_signature}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"id\": \"evt_1234567890\",\n    \"object\": \"event\",\n    \"type\": \"checkout.session.completed\",\n    \"data\": {\n        \"object\": {\n            \"id\": \"cs_1234567890\",\n            \"metadata\": {\n                \"user_id\": \"1\"\n            }\n        }\n    }\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/webhook/stripe",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"webhook",
+								"stripe"
+							]
+						},
+						"description": "Stripe webhook endpoint for handling payment events (requires proper signature)"
+					},
+					"response": []
+				}
+			],
+			"description": "Webhook endpoints for external service integrations"
+		},
+		{
+			"name": "System",
+			"item": [
+				{
+					"name": "Health Check",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								""
+							]
+						},
+						"description": "Basic health check endpoint"
+					},
+					"response": []
+				}
+			],
+			"description": "System health and status endpoints"
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// Auto-extract JWT token from verify OTP response",
+					"if (pm.request.name === \"Verify OTP\") {",
+					"    pm.test(\"Extract JWT token\", function () {",
+					"        var jsonData = pm.response.json();",
+					"        if (jsonData.access_token) {",
+					"            pm.environment.set(\"access_token\", jsonData.access_token);",
+					"            console.log(\"JWT token extracted and saved to environment\");",
+					"        }",
+					"    });",
+					"}"
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// Common test for all requests",
+					"pm.test(\"Status code is 200 or 201\", function () {",
+					"    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+					"});",
+					"",
+					"pm.test(\"Response has JSON content\", function () {",
+					"    pm.response.to.have.jsonBody();",
+					"});",
+					"",
+					"// Specific tests for authentication endpoints",
+					"if (pm.request.name === \"Verify OTP\") {",
+					"    pm.test(\"Response contains access token\", function () {",
+					"        var jsonData = pm.response.json();",
+					"        pm.expect(jsonData).to.have.property('access_token');",
+					"        pm.expect(jsonData.access_token).to.be.a('string');",
+					"    });",
+					"    ",
+					"    pm.test(\"Response contains token type\", function () {",
+					"        var jsonData = pm.response.json();",
+					"        pm.expect(jsonData).to.have.property('token_type');",
+					"        pm.expect(jsonData.token_type).to.eql('bearer');",
+					"    });",
+					"}",
+					"",
+					"// Test for chatroom creation",
+					"if (pm.request.name === \"Create Chatroom\") {",
+					"    pm.test(\"Response contains chatroom ID\", function () {",
+					"        var jsonData = pm.response.json();",
+					"        pm.expect(jsonData).to.have.property('id');",
+					"        pm.expect(jsonData.id).to.be.a('number');",
+					"    });",
+					"    ",
+					"    pm.test(\"Response contains chatroom name\", function () {",
+					"        var jsonData = pm.response.json();",
+					"        pm.expect(jsonData).to.have.property('name');",
+					"        pm.expect(jsonData.name).to.be.a('string');",
+					"    });",
+					"}",
+					"",
+					"// Test for message sending",
+					"if (pm.request.name === \"Send Message\") {",
+					"    pm.test(\"Response indicates message queued\", function () {",
+					"        var jsonData = pm.response.json();",
+					"        pm.expect(jsonData).to.have.property('status');",
+					"        pm.expect(jsonData.status).to.eql('message queued');",
+					"    });",
+					"    ",
+					"    pm.test(\"Response contains message ID\", function () {",
+					"        var jsonData = pm.response.json();",
+					"        pm.expect(jsonData).to.have.property('message_id');",
+					"        pm.expect(jsonData.message_id).to.be.a('number');",
+					"    });",
+					"}"
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8000",
+			"type": "string"
+		},
+		{
+			"key": "access_token",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "chatroom_id",
+			"value": "1",
+			"type": "string"
+		},
+		{
+			"key": "stripe_signature",
+			"value": "whsec_your_stripe_webhook_secret_here",
+			"type": "string"
+		}
+	]
+} 
