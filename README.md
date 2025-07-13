@@ -1,5 +1,10 @@
 # Gemini Style Backend System
 
+## 🌐 Live Deployment
+
+- **Base URL:** [https://gemini-backend-clone-qoqa.onrender.com](https://gemini-backend-clone-qoqa.onrender.com)
+- **API Docs (Swagger UI):** [https://gemini-backend-clone-qoqa.onrender.com/docs](https://gemini-backend-clone-qoqa.onrender.com/docs)
+
 A comprehensive backend system that enables user-specific chatrooms, OTP-based login, Gemini API-powered AI conversations, and subscription handling via Stripe.
 
 ## 🚀 Features
