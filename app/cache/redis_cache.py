@@ -20,3 +20,8 @@ def default_serializer(obj):
 def set_cached_chatrooms(user_id: int, data):
     key = f"chatrooms:{user_id}"
     r.set(key, json.dumps(data, default=default_serializer), ex=300)  # 5 mins TTL
+
+def invalidate_chatroom_cache(user_id: int):
+    """Invalidate chatroom cache for a specific user"""
+    key = f"chatrooms:{user_id}"
+    r.delete(key)

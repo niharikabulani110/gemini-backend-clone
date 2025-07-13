@@ -1,6 +1,9 @@
 from celery import Celery
 import requests
 from app.core.config import settings
+from app.database import SessionLocal
+from app.models.message import Message
+from app.services.gemini_service import get_gemini_response
 
 # Create Celery app
 celery = Celery(
@@ -19,21 +22,53 @@ celery.conf.update(
     enable_utc=True,
 )
 
-@celery.task
-def fetch_gemini_reply(prompt: str, chatroom_id: int):
-    """Fetch reply from Gemini API (chatroom_id is accepted for future use)"""
-    url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent"
-    headers = {
-        "Content-Type": "application/json",
-        "Authorization": f"Bearer {settings.GEMINI_API_KEY}"
-    }
-    data = {
-        "contents": [{"parts": [{"text": prompt}]}]
-    }
-
+def get_db():
+    db = SessionLocal()
     try:
-        response = requests.post(url, json=data, headers=headers)
-        response.raise_for_status()
-        return response.json()
-    except requests.exceptions.RequestException as e:
-        return {"error": str(e)}
+        return db
+    finally:
+        db.close()
+
+@celery.task
+def fetch_gemini_reply(prompt: str, chatroom_id: int, user_id: int = None):
+    """Fetch reply from Gemini API and save to database"""
+    try:
+        # Get Gemini response
+        response_text = get_gemini_response(prompt)
+        
+        # Save response to database
+        db = get_db()
+        try:
+            bot_message = Message(
+                chatroom_id=chatroom_id,
+                sender="bot",
+                content=response_text
+            )
+            db.add(bot_message)
+            db.commit()
+            db.refresh(bot_message)
+            
+            return {
+                "status": "success",
+                "message_id": bot_message.id,
+                "content": response_text
+            }
+        finally:
+            db.close()
+            
+    except Exception as e:
+        # Log error and save error message to database
+        error_message = f"Error generating response: {str(e)}"
+        db = get_db()
+        try:
+            bot_message = Message(
+                chatroom_id=chatroom_id,
+                sender="bot",
+                content=error_message
+            )
+            db.add(bot_message)
+            db.commit()
+        finally:
+            db.close()
+        
+        return {"status": "error", "error": str(e)}

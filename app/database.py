@@ -4,6 +4,7 @@ from app.core.config import settings
 from app.models.user import Base
 from app.models.chatroom import Chatroom
 from app.models.message import Message
+from app.models.subscription import Subscription, UserUsage
 
 # Create engine
 engine = create_engine(settings.DATABASE_URL)

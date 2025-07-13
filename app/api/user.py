@@ -4,6 +4,7 @@ from app.models.user import User
 from app.core.security import verify_token
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from app.database import SessionLocal
+from app.services.rate_limit_service import get_user_usage
 
 auth_scheme = HTTPBearer()
 router = APIRouter()
@@ -12,9 +13,8 @@ def get_db():
     db = SessionLocal()
     try:
         return db
-    except Exception:
+    finally:
         db.close()
-        raise
 
 def get_user_id(credentials: HTTPAuthorizationCredentials = Depends(auth_scheme)) -> int:
     token = credentials.credentials
@@ -23,7 +23,7 @@ def get_user_id(credentials: HTTPAuthorizationCredentials = Depends(auth_scheme)
         raise HTTPException(status_code=401, detail="Invalid token")
     return int(payload["sub"])
 
-@router.get("/profile", response_model=UserResponse)
+@router.get("/me", response_model=UserResponse)
 def get_user_profile(user_id: int = Depends(get_user_id)):
     """Get current user's profile information"""
     db = get_db()
@@ -33,4 +33,14 @@ def get_user_profile(user_id: int = Depends(get_user_id)):
             raise HTTPException(status_code=404, detail="User not found")
         return user
     finally:
-        db.close() 
+        db.close()
+
+@router.get("/profile", response_model=UserResponse)
+def get_user_profile_alt(user_id: int = Depends(get_user_id)):
+    """Alternative endpoint for user profile (backward compatibility)"""
+    return get_user_profile(user_id)
+
+@router.get("/usage")
+def get_usage_stats(user_id: int = Depends(get_user_id)):
+    """Get user's current usage statistics"""
+    return get_user_usage(user_id) 

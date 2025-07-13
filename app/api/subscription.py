@@ -1,5 +1,5 @@
-from fastapi import APIRouter, Depends, Request, HTTPException
-from app.services.stripe_service import create_stripe_checkout, handle_stripe_webhook, get_subscription_status
+from fastapi import APIRouter, Depends, HTTPException
+from app.services.stripe_service import create_stripe_checkout, get_subscription_status
 from app.schemas.subscription import SubscriptionStatusResponse
 from app.core.security import verify_token
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -16,14 +16,15 @@ def get_user_id(credentials: HTTPAuthorizationCredentials = Depends(auth_scheme)
 
 @router.post("/pro")
 def start_subscription(user_id: int = Depends(get_user_id)):
-    return create_stripe_checkout(user_id)
+    try:
+        return create_stripe_checkout(user_id)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 @router.get("/status", response_model=SubscriptionStatusResponse)
 def check_status(user_id: int = Depends(get_user_id)):
-    return {"status": get_subscription_status(user_id)}
-
-@router.post("/webhook/stripe")
-async def stripe_webhook(request: Request):
-    payload = await request.body()
-    sig_header = request.headers.get("stripe-signature")
-    return handle_stripe_webhook(payload, sig_header)
+    try:
+        status = get_subscription_status(user_id)
+        return {"status": status}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
